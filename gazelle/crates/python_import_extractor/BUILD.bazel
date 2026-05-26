@@ -1,0 +1,46 @@
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@rules_rs//rs:rust_test.bzl", "rust_test")
+load(":opt.bzl", "cgo_rust_library", "opt_cgo_rust_library")
+
+_SRCS = [
+    "src/lib.rs",
+    "src/parser.rs",
+]
+
+_DEPS = [
+    "@rules_python_gazelle_crates//:rayon",
+    "@rules_python_gazelle_crates//:serde",
+    "@rules_python_gazelle_crates//:serde_json",
+    "@rules_python_gazelle_crates//:tree-sitter",
+    "@rules_python_gazelle_crates//:tree-sitter-python",
+]
+
+bzl_library(
+    name = "opt_bzl",
+    srcs = ["opt.bzl"],
+    deps = [
+        "@rules_rs//rs:rust_library",
+        "@rules_rust//rust:bzl_lib",
+        "@with_cfg.bzl//:with_cfg",
+    ],
+)
+
+opt_cgo_rust_library(
+    name = "python_import_extractor",
+    srcs = _SRCS,
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = _DEPS,
+)
+
+cgo_rust_library(
+    name = "python_import_extractor_testlib",
+    srcs = _SRCS,
+    edition = "2021",
+    deps = _DEPS,
+)
+
+rust_test(
+    name = "test",
+    crate = ":python_import_extractor_testlib",
+)

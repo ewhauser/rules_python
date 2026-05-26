@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "rustextractor",
+    srcs = ["rust_extractor.go"],
+    cdeps = ["//crates/python_import_extractor:python_import_extractor"],
+    cgo = True,
+    importpath = "github.com/bazel-contrib/rules_python/gazelle/python/rustextractor",
+    visibility = ["//python:__pkg__"],
+)
+
+go_test(
+    name = "rustextractor_test",
+    srcs = ["rust_extractor_test.go"],
+    embed = [":rustextractor"],
+)

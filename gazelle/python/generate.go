@@ -248,7 +248,12 @@ func (py *Python) GenerateRules(args language.GenerateArgs) language.GenerateRes
 		}
 	}
 
-	parser := newPython3Parser(args.Config.RepoRoot, args.Rel, cfg.IgnoresDependency)
+	parser := newPython3Parser(
+		args.Config.RepoRoot,
+		args.Rel,
+		cfg.IgnoresDependency,
+		newPythonRepoFileFilter(cfgs, cfg.ExcludedPatterns()),
+	)
 	visibility := cfg.Visibility()
 
 	var result language.GenerateResult

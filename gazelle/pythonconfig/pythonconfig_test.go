@@ -1,6 +1,7 @@
 package pythonconfig
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -279,4 +280,20 @@ func TestConfigsMap(t *testing.T) {
 			t.Fatal("non-configured subpackage should match root")
 		}
 	})
+}
+
+func TestFindThirdPartyDependencyCachesMissingManifest(t *testing.T) {
+	config := New(t.TempDir(), "")
+	config.SetGazelleManifestPath(filepath.Join(config.repoRoot, "gazelle_python.yaml"))
+
+	if _, _, ok := config.FindThirdPartyDependency("requests"); ok {
+		t.Fatal("expected missing manifest to have no dependency")
+	}
+
+	if !config.gazelleManifestLoaded {
+		t.Fatal("expected missing manifest lookup to be cached")
+	}
+	if config.gazelleManifest != nil {
+		t.Fatalf("expected no manifest, got %#v", config.gazelleManifest)
+	}
 }

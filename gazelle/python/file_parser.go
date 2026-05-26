@@ -39,18 +39,11 @@ const (
 	sitterNodeTypeImportFromStatement = "import_from_statement"
 )
 
-type ParserOutput struct {
-	FileName string
-	Modules  []Module
-	Comments []Comment
-	HasMain  bool
-}
-
 type FileParser struct {
-	code                 []byte
-	relFilepath          string
-	output               ParserOutput
-	inTypeCheckingBlock  bool
+	code                []byte
+	relFilepath         string
+	output              ParserOutput
+	inTypeCheckingBlock bool
 }
 
 func NewFileParser() *FileParser {

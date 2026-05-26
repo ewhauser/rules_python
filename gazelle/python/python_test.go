@@ -36,9 +36,10 @@ import (
 )
 
 const (
-	extensionDir      = "python" + string(os.PathSeparator)
-	testDataPath      = extensionDir + "testdata" + string(os.PathSeparator)
-	gazelleBinaryName = "_gazelle_binary_with_proto"
+	extensionDir              = "python" + string(os.PathSeparator)
+	testDataPath              = extensionDir + "testdata" + string(os.PathSeparator)
+	defaultGazelleBinaryName  = "_gazelle_binary_with_proto"
+	gazelleBinaryNameOverride = "RULES_PYTHON_GAZELLE_TEST_BINARY"
 )
 
 func TestGazelleBinary(t *testing.T) {
@@ -188,6 +189,10 @@ func testPath(t *testing.T, gazellePath, name string, files []bazel.RunfileEntry
 }
 
 func mustFindGazelle() string {
+	gazelleBinaryName := defaultGazelleBinaryName
+	if override := os.Getenv(gazelleBinaryNameOverride); override != "" {
+		gazelleBinaryName = override
+	}
 	gazellePath, ok := bazel.FindBinary(extensionDir, gazelleBinaryName)
 	if !ok {
 		panic("could not find gazelle binary")

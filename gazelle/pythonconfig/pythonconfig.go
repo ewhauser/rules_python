@@ -190,11 +190,12 @@ func (c Configs) ParentForPackage(pkg string) *Config {
 type Config struct {
 	parent *Config
 
-	extensionEnabled    bool
-	repoRoot            string
-	pythonProjectRoot   string
-	gazelleManifestPath string
-	gazelleManifest     *manifest.Manifest
+	extensionEnabled      bool
+	repoRoot              string
+	pythonProjectRoot     string
+	gazelleManifestPath   string
+	gazelleManifest       *manifest.Manifest
+	gazelleManifestLoaded bool
 
 	excludedPatterns                          *singlylinkedlist.List
 	ignoreFiles                               map[string]struct{}
@@ -338,12 +339,15 @@ func (c *Config) PythonProjectRoot() string {
 // gazelle_python.yaml file.
 func (c *Config) SetGazelleManifest(gazelleManifest *manifest.Manifest) {
 	c.gazelleManifest = gazelleManifest
+	c.gazelleManifestLoaded = true
 }
 
 // SetGazelleManifestPath sets the path to the gazelle_python.yaml file
 // for the current configuration.
 func (c *Config) SetGazelleManifestPath(gazelleManifestPath string) {
 	c.gazelleManifestPath = gazelleManifestPath
+	c.gazelleManifest = nil
+	c.gazelleManifestLoaded = false
 }
 
 // FindThirdPartyDependency scans the gazelle manifests for the current config
@@ -352,7 +356,7 @@ func (c *Config) SetGazelleManifestPath(gazelleManifestPath string) {
 func (c *Config) FindThirdPartyDependency(modName string) (string, string, bool) {
 	for currentCfg := c; currentCfg != nil; currentCfg = currentCfg.parent {
 		// Attempt to load the manifest if needed.
-		if currentCfg.gazelleManifestPath != "" && currentCfg.gazelleManifest == nil {
+		if currentCfg.gazelleManifestPath != "" && !currentCfg.gazelleManifestLoaded {
 			currentCfgManifest, err := loadGazelleManifest(currentCfg.gazelleManifestPath)
 			if err != nil {
 				log.Fatal(err)

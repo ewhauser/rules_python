@@ -15,7 +15,6 @@
 package python
 
 import (
-	"context"
 	_ "embed"
 	"fmt"
 	"log"
@@ -24,7 +23,6 @@ import (
 
 	"github.com/emirpasic/gods/sets/treeset"
 	godsutils "github.com/emirpasic/gods/utils"
-	"golang.org/x/sync/errgroup"
 )
 
 // python3Parser implements a parser for Python files that extracts the modules
@@ -34,6 +32,9 @@ type python3Parser struct {
 	repoRoot string
 	// The value of language.GenerateArgs.Rel.
 	relPackagePath string
+	// shouldParseRepoFile reports whether a repo-relative Python file should be
+	// included in repository-level preparse work.
+	shouldParseRepoFile repoFileFilter
 	// The function that determines if a dependency is ignored from a Gazelle
 	// directive. It's the signature of pythonconfig.Config.IgnoresDependency.
 	ignoresDependency func(dep string) bool
@@ -44,11 +45,13 @@ func newPython3Parser(
 	repoRoot string,
 	relPackagePath string,
 	ignoresDependency func(dep string) bool,
+	shouldParseRepoFile repoFileFilter,
 ) *python3Parser {
 	return &python3Parser{
-		repoRoot:          repoRoot,
-		relPackagePath:    relPackagePath,
-		ignoresDependency: ignoresDependency,
+		repoRoot:            repoRoot,
+		relPackagePath:      relPackagePath,
+		shouldParseRepoFile: shouldParseRepoFile,
+		ignoresDependency:   ignoresDependency,
 	}
 }
 
@@ -65,34 +68,14 @@ func (p *python3Parser) parseSingle(pyFilename string) (*treeset.Set, map[string
 func (p *python3Parser) parse(pyFilenames *treeset.Set) (*treeset.Set, map[string]*treeset.Set, *annotations, error) {
 	modules := treeset.NewWith(moduleComparator)
 
-	g, ctx := errgroup.WithContext(context.Background())
-	ch := make(chan struct{}, 6) // Limit the number of concurrent parses.
-	chRes := make(chan *ParserOutput, len(pyFilenames.Values()))
-	for _, v := range pyFilenames.Values() {
-		ch <- struct{}{}
-		g.Go(func(filename string) func() error {
-			return func() error {
-				defer func() {
-					<-ch
-				}()
-				res, err := NewFileParser().ParseFile(ctx, p.repoRoot, p.relPackagePath, filename)
-				if err != nil {
-					return err
-				}
-				chRes <- res
-				return nil
-			}
-		}(v.(string)))
-	}
-	if err := g.Wait(); err != nil {
+	results, err := p.parseFiles(pyFilenames)
+	if err != nil {
 		return nil, nil, nil, err
 	}
-	close(ch)
-	close(chRes)
-	mainModules := make(map[string]*treeset.Set, len(chRes))
+	mainModules := make(map[string]*treeset.Set, len(results))
 	allAnnotations := new(annotations)
 	allAnnotations.ignore = make(map[string]struct{})
-	for res := range chRes {
+	for _, res := range results {
 		if res.HasMain {
 			mainModules[res.FileName] = treeset.NewWith(moduleComparator)
 		}
